@@ -1,5 +1,5 @@
 # Import required libraries, drivers, and manager classes
-import os, time, machine, socket
+import os, io, time, machine, socket, sys
 from machine import SPI, Pin
 from managers.DisplayManager import DisplayManager
 from managers.FileManager import FileManager
@@ -199,11 +199,21 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         # Generic error handler for unexpected exceptions
+        # For better debugging, extract human-readable error message,
+        # format it for 1-2 lines (max. 84 characters error message)
+        # and print corresponding most recent call file name and line number
+        string_io = io.StringIO()
+        sys.print_exception(e, string_io)
+        traceback_info = string_io.getvalue().split('\n')[-3].replace('"', ',').replace(',', ',').split(',')
+        err_file_name = traceback_info[1].strip().split("/")[-1]
+        err_line_number = traceback_info[3].strip().replace('line ', '')
+        err_text = str(e)[0].upper() + str(e)[1:84]
+        err_lines = [err_text[i:i + 42] for i in range(0, len(err_text), 42)]
         dspm.draw_waiting_screen()
         exit_if_process_fails(*fmgr.open_sd_card(), dspm, fmgr)
-        exit_if_process_fails("1000", ["An unexpected error occured:",
-                                       str(e)[:42],
-                                       "Please try to reproduce it and open",
-                                       "a new issue on the GitHub page!"], 
+        exit_if_process_fails("1000", ["An unexpected error occured:"] +
+                                       err_lines +
+                                       [f"In {err_file_name}, line {err_line_number}",
+                                       "Please attempt to reproduce this error",
+                                       "and report it on the GitHub page!"], 
                                        dspm, fmgr)
-
